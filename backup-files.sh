@@ -28,6 +28,27 @@ if ! rclone_about_err=$(rclone about "${RCLONE_REMOTE_NAME}:" 2>&1); then
     exit 1
 fi
 
+# Prima del backup: su Drive, solo in questo percorso, controlla ed elimina file più vecchi di N giorni
+RETENTION_DAYS="${BACKUP_FILES_REMOTE_RETENTION_DAYS:-90}"
+MIN_AGE="${RETENTION_DAYS}d"
+echo "Drive (${RCLONE_DEST}): controllo file più vecchi di ${RETENTION_DAYS} giorni..."
+if ! old_remote_list=$(rclone lsf "${RCLONE_DEST}" -R --files-only --min-age "$MIN_AGE" 2>&1); then
+    echo "Errore nell'elenco remoto (rclone lsf): ${old_remote_list}" >&2
+    echo "$(date): rclone lsf fallito per ${RCLONE_DEST}" >> "$ERROR_LOG"
+    exit 1
+fi
+if echo "$old_remote_list" | grep -q .; then
+    echo "Trovati file oltre i ${RETENTION_DAYS} giorni, rimozione in corso..."
+    if ! rclone delete --min-age "$MIN_AGE" "${RCLONE_DEST}"; then
+        echo "Errore durante la pulizia remota (rclone delete)." >&2
+        echo "$(date): rclone delete --min-age fallito per ${RCLONE_DEST}" >> "$ERROR_LOG"
+        exit 1
+    fi
+    echo "Pulizia remota completata."
+else
+    echo "Nessun file oltre i ${RETENTION_DAYS} giorni da rimuovere su Drive."
+fi
+
 # Funzione per inviare messaggi su Telegram
 send_telegram_message() {
     local message="$1"

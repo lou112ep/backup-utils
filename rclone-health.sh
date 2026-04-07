@@ -24,7 +24,7 @@ send_telegram_plain() {
 }
 
 # Raccoglie nomi remote unici (es. gdrive) da DB, files e retenzione
-paths_raw="${RCLONE_REMOTE_DB:-} ${RCLONE_REMOTE_FILES:-} ${RETENTION_REMOTE_DIRS:-}"
+paths_raw="${RCLONE_REMOTE_DB:-} ${RCLONE_REMOTE_FILES:-}"
 unique_remotes=()
 for path in $paths_raw; do
     [ -z "$path" ] && continue
