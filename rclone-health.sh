@@ -4,7 +4,8 @@
 # (rclone config reconnect va eseguito da root, come i backup).
 #
 # Esempio cron (1 volta al giorno alle 8:00): il file di log riceve solo output in caso
-# di errore (config mancante, remote KO, ecc.); se tutto OK lo script non scrive nulla.
+# di errore; se tutto OK non scrive nulla (né log né spam). Da terminale interattivo
+# stampa una riga di OK. Forzare messaggio: RCLONE_HEALTH_VERBOSE=1 ./rclone-health.sh
 #   0 8 * * * /data/scripts/rclone-health.sh >> /var/log/rclone-health.log 2>&1
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,7 +24,7 @@ send_telegram_plain() {
         --data-urlencode "text=${message}"
 }
 
-# Raccoglie nomi remote unici (es. gdrive) da DB, files e retenzione
+# Raccoglie nomi remote unici (es. gdrive) da RCLONE_REMOTE_DB e RCLONE_REMOTE_FILES
 paths_raw="${RCLONE_REMOTE_DB:-} ${RCLONE_REMOTE_FILES:-}"
 unique_remotes=()
 for path in $paths_raw; do
@@ -59,6 +60,10 @@ for remote in "${unique_remotes[@]}"; do
 done
 
 if [ ${#failed_remotes[@]} -eq 0 ]; then
+    if [ -t 1 ] || [ "${RCLONE_HEALTH_VERBOSE:-}" = 1 ]; then
+        ts_ok=$(date "+%Y-%m-%d %H:%M:%S")
+        echo "${ts_ok} rclone OK: ${unique_remotes[*]}"
+    fi
     exit 0
 fi
 
