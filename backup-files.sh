@@ -14,6 +14,19 @@ CURRENT_DATE=$(date +"%Y-%m-%d")
 BACKUP_DIR="${BACKUP_FILES_ROOT:-/home/ubuntu/backup}/$CURRENT_DATE"
 ERROR_LOG="${ERROR_LOG_BACKUP_FILES:-/home/ubuntu/errors_backup_files.log}"
 RCLONE_DEST="${RCLONE_REMOTE_FILES:-gdrive:backup-mia-vps/files}"
+# Nome del remote rclone (es. gdrive da "gdrive:cartella/...")
+RCLONE_REMOTE_NAME="${RCLONE_DEST%%:*}"
+
+echo "Verifica connessione rclone (${RCLONE_REMOTE_NAME})..."
+if ! rclone_about_err=$(rclone about "${RCLONE_REMOTE_NAME}:" 2>&1); then
+    echo "$rclone_about_err" >&2
+    echo "" >&2
+    echo "rclone non riesce ad autenticarsi (di solito: token OAuth scaduto o revocato)." >&2
+    echo "Sul server esegui:" >&2
+    echo "  rclone config reconnect ${RCLONE_REMOTE_NAME}:" >&2
+    echo "Completa il browser OAuth, poi rilancia questo script." >&2
+    exit 1
+fi
 
 # Funzione per inviare messaggi su Telegram
 send_telegram_message() {
